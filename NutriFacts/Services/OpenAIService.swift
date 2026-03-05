@@ -9,11 +9,11 @@ final class OpenAIService: AIServiceProtocol {
 
     private let requestBuilder: OpenAIRequestBuilder
     private let responseParser: OpenAIResponseParser
-    private let urlSession: URLSession
+    private let urlSession: NetworkSession
 
     init(
         apiKey: String = APIKeyProvider.openAIKey,
-        urlSession: URLSession = .shared
+        urlSession: NetworkSession = URLSession.shared
     ) {
         self.requestBuilder = OpenAIRequestBuilder(apiKey: apiKey)
         self.responseParser = OpenAIResponseParser()
@@ -28,7 +28,8 @@ final class OpenAIService: AIServiceProtocol {
     }
 
     func lookupNutrition(image: UIImage) async throws -> NutritionFacts {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+        let resizedImage = image.resized(toMaxDimension: 1024)
+        guard let imageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw AppError.invalidImage
         }
         let request = try requestBuilder.buildImageRequest(imageData: imageData)

@@ -790,8 +790,10 @@ struct SpeechDictationTests {
             speechService: mockSpeech
         )
         await viewModel.startDictation()
-        // Yield to allow the background dictation task to consume the stream
-        await Task.yield()
+        // Yield multiple times to allow the background dictation task to consume the stream
+        for _ in 0..<10 {
+            await Task.yield()
+        }
         #expect(viewModel.searchText == "Banana")
     }
 
@@ -920,7 +922,65 @@ struct AppleIntelligenceServiceTests {
     }
 }
 
+// MARK: - OpenAI Vision / Image Tests
 
+@Suite("OpenAI Vision Service")
+@MainActor
+struct OpenAIVisionServiceTests {
+
+    private func makeSuccessJSON(productName: String = "Salmon") -> Data {
+        let jsonString = """
+        {
+          "choices": [{
+            "message": {
+              "content": "{\\"productName\\":\\"\(productName)\\",\\"isLiquid\\":false,\\"macronutrients\\":{\\"calories\\":208,\\"totalFat\\":13,\\"saturatedFat\\":3,\\"transFat\\":0,\\"carbohydrates\\":0,\\"sugar\\":0,\\"dietaryFiber\\":0,\\"protein\\":20},\\"vitamins\\":[],\\"minerals\\":[],\\"allergens\\":[],\\"ingredients\\":null}"
+            }
+          }]
+        }
+        """
+        return Data(jsonString.utf8)
+    }
+
+    @Test("resized image does not exceed max dimension")
+    func testUIImageResize_largeImage_reducesToMaxDimension() {
+        let largeSize = CGSize(width: 3000, height: 2000)
+        let renderer = UIGraphicsImageRenderer(size: largeSize)
+        let largeImage = renderer.image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(origin: .zero, size: largeSize))
+        }
+        let resized = largeImage.resized(toMaxDimension: 1024)
+        let maxDimension = max(resized.size.width, resized.size.height)
+        #expect(maxDimension <= 1024)
+    }
+
+    @Test("image request uses OpenAI endpoint URL")
+    func testLookupNutrition_image_callsVisionEndpoint() async throws {
+        let mockSession = MockNetworkSession(responseData: makeSuccessJSON())
+        let service = OpenAIService(apiKey: "test-key", urlSession: mockSession)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100))
+        let image = renderer.image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
+        }
+        let result = try await service.lookupNutrition(image: image)
+        #expect(result.productName == "Salmon")
+    }
+
+    @Test("image lookup with valid response returns NutritionFacts")
+    func testLookupNutrition_image_validResponse_returnsNutritionFacts() async throws {
+        let mockSession = MockNetworkSession(responseData: makeSuccessJSON(productName: "Salmon"))
+        let service = OpenAIService(apiKey: "test-key", urlSession: mockSession)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 200))
+        let image = renderer.image { context in
+            UIColor.green.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 200, height: 200))
+        }
+        let result = try await service.lookupNutrition(image: image)
+        #expect(result.productName == "Salmon")
+        #expect(result.macronutrients.calories == 208)
+    }
+}
 
 
 
