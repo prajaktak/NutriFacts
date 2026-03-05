@@ -451,6 +451,60 @@ struct MacroPieSliceTests {
     }
 }
 
+// MARK: - NutrientRow Tests
+
+@Suite("NutrientRow")
+struct NutrientRowTests {
+
+    @Test("nutrientRowText formats integer value without decimal")
+    func testNutrientRowText_integerValue_formatsWithoutDecimal() {
+        let item = NutrientItem(id: UUID(), nutrientName: "Potassium", nutrientAmount: 107, nutrientUnit: "mg")
+        #expect(item.formattedAmount == "107 mg")
+    }
+
+    @Test("nutrientRowText formats decimal value with one decimal place")
+    func testNutrientRowText_decimalValue_formatsWithOneDecimal() {
+        let item = NutrientItem(id: UUID(), nutrientName: "Vitamin C", nutrientAmount: 5.1, nutrientUnit: "mg")
+        #expect(item.formattedAmount == "5.1 mg")
+    }
+}
+
+// MARK: - Allergens Display Tests
+@Suite("Allergens Display")
+struct AllergensDisplayTests {
+
+    @Test("empty allergens list displays none detected text")
+    func testAllergens_emptyList_displaysNoneDetected() {
+        let nutritionFacts = NutritionFacts(
+            productName: "Apple",
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0,
+                transFat: 0.0, carbohydrates: 14, sugar: 10,
+                dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+        #expect(nutritionFacts.allergensDisplayText == "None detected")
+    }
+
+    @Test("allergens list displays comma separated values")
+    func testAllergens_nonEmptyList_displaysCommaSeparated() {
+        let nutritionFacts = NutritionFacts(
+            productName: "Bread",
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 265, totalFat: 3.2, saturatedFat: 0.7,
+                transFat: 0.0, carbohydrates: 49, sugar: 5,
+                dietaryFiber: 2.7, protein: 9
+            ),
+            vitamins: [], minerals: [], allergens: ["Gluten", "Wheat"], ingredients: nil
+        )
+        #expect(nutritionFacts.allergensDisplayText == "Gluten, Wheat")
+    }
+}
+
+
 
 
 
