@@ -246,3 +246,96 @@ NutriFactsApp
 - Confirm which `FoundationModels` APIs are available in iOS 18 vs iOS 18.1+ for structured generation.
 - Determine if GPT-4o vision supports the required JSON schema output reliably enough, or if a post-processing step is needed.
 - Confirm Apple Intelligence availability on all target devices (requires iPhone 15 Pro or later, or iPhone 16+).
+
+---
+
+## 13. Coding Conventions
+
+All code in this project follows the conventions defined in `CODING_CONVENTIONS.md`. The key rules that directly affect architecture and implementation decisions are summarized below.
+
+### 13.1 File Organization
+
+- **One type per file** — every `enum`, `struct`, `class`, or `protocol` lives in its own file.
+- File structure:
+  - Models: `NutriFacts/Models/`
+  - Views: `NutriFacts/Views/`
+  - ViewModels: `NutriFacts/ViewModels/`
+  - Services: `NutriFacts/Services/`
+  - Tests: `NutriFactsTests/`
+
+### 13.2 Naming
+
+- **PascalCase** for types and protocols: `NutritionFacts`, `AIServiceProtocol`, `OverviewTabView`.
+- **camelCase** for properties and methods: `productName`, `isLiquid`, `lookupNutrition(query:)`.
+- **Descriptive names only** — no abbreviations shorter than 3 characters. No `i`, `j`, `cx`, `idx`.
+- Loop variables: `rowIndex`, `columnIndex`, `itemIndex` — never `i` or `j`.
+- Boolean properties read as assertions: `isLiquid`, `isRecording`, `isEmpty`.
+- Compensate for weak type information: `productName: String` not `name: String`, `nutrientAmount: Double` not `amount: Double`.
+
+### 13.3 Architecture & SOLID
+
+- **Single Responsibility:** Each type and function does ONE thing. `OpenAIService` only handles OpenAI calls; parsing is a separate concern.
+- **Dependency Inversion:** `NutritionViewModel` depends on `AIServiceProtocol`, not `OpenAIService` directly. This enables testing and offline/online switching.
+- **Open/Closed:** New AI providers (e.g. Gemini) can be added by conforming to `AIServiceProtocol` without modifying `NutritionViewModel`.
+- **Interface Segregation:** Use small, focused protocols. `AIServiceProtocol` covers only lookup; connectivity is a separate `ConnectivityMonitoring` protocol.
+- **Composition over inheritance:** Use `struct` and `protocol` by default. Use `class` only where reference semantics are required (e.g. `NutritionViewModel` with `@Observable`).
+
+### 13.4 Access Control
+
+- Default to `private`. Only make properties/methods `internal` or `public` when required.
+- Use `private(set)` to expose read access while restricting writes.
+- Example: `private(set) var nutritionFacts: NutritionFacts?`
+
+### 13.5 Swift Concurrency
+
+- Use `async/await` exclusively — no Combine, no completion handlers in new code.
+- Mark UI-updating functions with `@MainActor`.
+- Check `Task.isCancelled` in long-running AI request tasks.
+- Keep async functions single-purpose; compose at a higher level in `NutritionViewModel`.
+
+### 13.6 SwiftUI Patterns
+
+- Every SwiftUI view **must** have a `#Preview` macro. No `traits` argument in `#Preview`.
+- Views are stateless where possible — read from `NutritionViewModel` via `@Environment` or passed as parameters.
+- Use `@Binding` only when a view needs to write back to a parent.
+- Do not use `@EnvironmentObject` deeply — prefer explicit constructor injection for views.
+- Use `ThemeColor` for all colors — no hardcoded `Color` values in views.
+
+### 13.7 Testing (TDD)
+
+- **One behavior per test** — each test verifies exactly one thing.
+- Test naming: `testFunctionName_condition_expectedResult`
+  - Example: `testLookup_emptyQuery_throwsInvalidInput`
+  - Example: `testNutritionFacts_isLiquid_showsPer100ml`
+- Use the Swift `Testing` framework (`@Test`, `#expect`).
+- Write the failing test first, then the minimal code to pass it.
+- No `guard` statements in tests — hardcode test data.
+
+### 13.8 Error Handling
+
+- Use `Optional` for simple "not found" cases.
+- Use `throws` / `AppError` when the caller needs to distinguish error reasons.
+- Never silently swallow errors unless explicitly non-critical.
+- Surface only friendly, non-technical messages to the user.
+
+### 13.9 SwiftLint
+
+- Zero linting errors or warnings allowed.
+- Key limits: line length 150 (warning) / 200 (error), function body 300 (warning), file length 1000 (warning).
+- Prefer `.isEmpty` over `.count == 0`.
+- No force cast (`as!`), no force try (`try!`), no force unwrap (`!`).
+- No parentheses around `if` conditions.
+- All identifiers minimum 3 characters.
+
+### 13.10 Branching & Commits
+
+- Feature branches: `feature/<short-description>`
+- Fix branches: `fix/<short-description>`
+- Commit messages in imperative mood: "Add HomeView layout", "Fix speech recognizer locale"
+- PR checklist before merging:
+  - [ ] Builds successfully
+  - [ ] All tests pass
+  - [ ] Zero SwiftLint warnings/errors
+  - [ ] Every new view has `#Preview`
+  - [ ] One type per file
+  - [ ] One behavior per test

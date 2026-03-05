@@ -1,0 +1,511 @@
+title,body,labels,milestone
+ISSUE-01 — Define core data models,"**Epic:** Foundation
+**User Story:** Supports all user stories
+**Priority:** P0 — must be completed first
+**Branch:** `feature/01-core-data-models`
+
+## What to build
+
+Create the following files, one type per file, in `NutriFacts/Models/`:
+
+- `NutritionFacts.swift` — `struct NutritionFacts: Codable` with properties: `productName: String`, `isLiquid: Bool`, `macronutrients: Macronutrients`, `vitamins: [NutrientItem]`, `minerals: [NutrientItem]`, `allergens: [String]`, `ingredients: String?`
+- `Macronutrients.swift` — `struct Macronutrients: Codable` with properties: `calories: Double`, `totalFat: Double`, `saturatedFat: Double`, `transFat: Double`, `carbohydrates: Double`, `sugar: Double`, `dietaryFiber: Double`, `protein: Double`
+- `NutrientItem.swift` — `struct NutrientItem: Codable, Identifiable` with properties: `id: UUID`, `nutrientName: String`, `nutrientAmount: Double`, `nutrientUnit: String`
+- `AppError.swift` — `enum AppError: Error` with cases: `productNotFound(followUpQuestions: [String])`, `aiUnavailable`, `networkError(Error)`, `invalidImage`, `parsingError`
+- `AppState.swift` — `enum AppState` with cases: `idle`, `loading`, `success(NutritionFacts)`, `error(AppError)`
+
+## Coding Convention Requirements
+
+- All types use `let` for immutable properties
+- `NutrientItem` uses `nutrientName`, `nutrientAmount`, `nutrientUnit` — not `name`, `amount`, `unit`
+- All five types in separate files
+- No UI code in this issue
+
+## TDD — Tests to write first in `NutriFactsTests/Models/`
+
+- `testNutritionFacts_isLiquid_isFalseByDefault`
+- `testNutritionFacts_isLiquid_isTrueWhenSet`
+- `testAppState_success_holdsNutritionFacts`
+- `testAppState_error_holdsAppError`
+
+## Done When
+
+- [ ] All five files compile with no errors
+- [ ] All four tests pass
+- [ ] Zero SwiftLint warnings","P0,foundation,models",v1.0
+ISSUE-02 — Set up NutritionViewModel and AIServiceProtocol,"**Epic:** Foundation
+**User Story:** Supports all user stories
+**Depends on:** ISSUE-01
+**Priority:** P0
+**Branch:** `feature/02-nutrition-viewmodel`
+
+## What to build
+
+Create the following files in `NutriFacts/Services/` and `NutriFacts/ViewModels/`:
+
+- `AIServiceProtocol.swift` — `protocol AIServiceProtocol` with:
+  - `func lookupNutrition(query: String) async throws -> NutritionFacts`
+  - `func lookupNutrition(image: UIImage) async throws -> NutritionFacts`
+- `NutritionViewModel.swift` — `@Observable final class NutritionViewModel` with:
+  - `private(set) var appState: AppState = .idle`
+  - `var searchText: String = ""`
+  - `var isRecording: Bool = false`
+  - `private let aiService: AIServiceProtocol` — injected via `init(aiService: AIServiceProtocol)`
+  - `func search() async`
+  - `func clearSearch()`
+  - `func analyzePhoto(_ selectedImage: UIImage) async`
+  - Stub implementations only — no real AI calls yet
+
+## Coding Convention Requirements
+
+- `NutritionViewModel` depends on `AIServiceProtocol`, not a concrete type (Dependency Inversion)
+- `appState` is `private(set)`
+- All async functions marked `@MainActor`
+- Each method does ONE thing (Single Responsibility)
+
+## TDD — Tests to write first in `NutriFactsTests/ViewModels/`
+
+- `testClearSearch_resetsSearchText`
+- `testClearSearch_setsStateToIdle`
+- `testSearch_setsStateToLoading`
+- `testSearch_onSuccess_setsStateToSuccess`
+- `testSearch_onError_setsStateToError`
+
+## Done When
+
+- [ ] `NutritionViewModel` and `AIServiceProtocol` compile
+- [ ] All five tests pass using a mock `AIServiceProtocol`
+- [ ] Zero SwiftLint warnings","P0,foundation,viewmodel",v1.0
+ISSUE-03 — Build HomeView layout,"**Epic:** Text Search
+**User Story:** US-01, US-02
+**Depends on:** ISSUE-02
+**Priority:** P0
+**Branch:** `feature/03-home-view`
+
+## What to build
+
+Create the following files in `NutriFacts/Views/`:
+
+- `HomeView.swift` — root view shown in `.idle` state with large navigation title, `SearchBarView`, suggestion chips, and empty state text
+- `SearchBarView.swift` — contains `TextField`, clear button (visible when text non-empty), mic button, camera button
+
+Suggestion chips: `[""Apple"", ""Oat milk"", ""Greek yogurt"", ""Salmon"", ""Banana""]`. Tapping a chip sets `searchText` and calls `search()`.
+
+## Coding Convention Requirements
+
+- `HomeView` and `SearchBarView` in separate files
+- Use `ThemeColor` for all colors — no hardcoded `Color(...)` values
+- Both files must have `#Preview` macros
+- `SearchBarView` receives closures for all actions — no direct ViewModel dependency inside `SearchBarView`
+
+## TDD
+
+- `testClearSearch_whenSearchTextIsEmpty_clearButtonIsHidden`
+- `testSuggestionChip_onTap_setsSearchText`
+
+## Done When
+
+- [ ] `HomeView` and `SearchBarView` render correctly in preview
+- [ ] Clear button appears/disappears based on `searchText`
+- [ ] Tapping a suggestion chip fills the search bar
+- [ ] Both views have `#Preview`
+- [ ] Zero SwiftLint warnings","P0,ui,text-search",v1.0
+ISSUE-04 — Wire app state to navigation,"**Epic:** Foundation
+**User Story:** US-01
+**Depends on:** ISSUE-03
+**Priority:** P0
+**Branch:** `feature/04-app-state-navigation`
+
+## What to build
+
+- `LoadingView.swift` — centered `ProgressView` with contextual message ""Looking up nutrition facts for [food name]…""
+- Update `ContentView.swift` to use `NavigationStack` and switch on `NutritionViewModel.appState`:
+  - `.idle` → `HomeView`
+  - `.loading` → `LoadingView` overlay
+  - `.success(let nutritionFacts)` → `ResultsView` (stub)
+  - `.error(let appError)` → `ErrorView` (stub)
+
+## Coding Convention Requirements
+
+- `LoadingView` in its own file with `#Preview`
+- No state management logic inside views
+- `NutritionViewModel` passed via environment or constructor injection
+
+## TDD
+
+- `testAppState_loading_showsLoadingView`
+- `testAppState_idle_showsHomeView`
+
+## Done When
+
+- [ ] Switching ViewModel state cycles through all four states
+- [ ] `LoadingView` appears and disappears correctly
+- [ ] Both new views have `#Preview`
+- [ ] Zero SwiftLint warnings","P0,foundation,navigation",v1.0
+ISSUE-05 — Build ResultsView shell with tab picker,"**Epic:** Nutrition Results
+**User Story:** US-08, US-09, US-10
+**Depends on:** ISSUE-04
+**Priority:** P1
+**Branch:** `feature/05-results-view-shell`
+
+## What to build
+
+- `ResultsView.swift` — accepts `NutritionFacts`, shows product name as nav title, segmented `Picker` with ""Overview"" and ""Full Details"" tabs, and unit label
+- `UnitLabel.swift` — small reusable view showing ""per 100g"" or ""per 100ml""
+- `ResultsTab.swift` — `enum ResultsTab` for tab selection state
+
+## Coding Convention Requirements
+
+- Three separate files (one type per file)
+- Tab selection as `@State private var selectedTab: ResultsTab`
+- Both views have `#Preview` with mock `NutritionFacts` data
+- No hardcoded colors
+
+## TDD
+
+- `testUnitLabel_isLiquidFalse_showsPer100g`
+- `testUnitLabel_isLiquidTrue_showsPer100ml`
+
+## Done When
+
+- [ ] `ResultsView` renders with product name in nav bar
+- [ ] Tab switching works
+- [ ] Unit label shows correct text based on `isLiquid`
+- [ ] All new types in separate files with `#Preview`
+- [ ] Zero SwiftLint warnings","P1,ui,results",v1.0
+ISSUE-06 — Build Overview tab with pie chart,"**Epic:** Nutrition Results
+**User Story:** US-08
+**Depends on:** ISSUE-05
+**Priority:** P1
+**Branch:** `feature/06-overview-tab`
+
+## What to build
+
+- `OverviewTabView.swift` — donut/pie chart using Swift Charts (Carbs/Protein/Fat in grams), sweep animation, chart legend, 2×2 macro summary grid, `UnitLabel`
+- `MacroSummaryCard.swift` — reusable card showing a value and label
+- `ThemeColor.swift` — define `ThemeColor.carbohydrates` (orange), `ThemeColor.protein` (green), `ThemeColor.fat` (pink) if not already defined
+
+Colors:
+- Carbohydrates: `ThemeColor.carbohydrates`
+- Protein: `ThemeColor.protein`
+- Fat: `ThemeColor.fat`
+
+## Coding Convention Requirements
+
+- `OverviewTabView` and `MacroSummaryCard` in separate files, each with `#Preview`
+- Use mock `Macronutrients` data in previews — no magic numbers inline in views
+- All colors via `ThemeColor`
+
+## TDD
+
+- `testMacroSummaryCard_displaysCorrectValue`
+- `testMacroSummaryCard_displaysCorrectLabel`
+
+## Done When
+
+- [ ] Chart renders with correct colors and segment labels using mock data
+- [ ] Macro cards show correct values
+- [ ] Sweep animation plays on appearance
+- [ ] All new files have `#Preview`
+- [ ] Zero SwiftLint warnings","P1,ui,results",v1.0
+ISSUE-07 — Build Full Details tab,"**Epic:** Nutrition Results
+**User Story:** US-09
+**Depends on:** ISSUE-05
+**Priority:** P1
+**Branch:** `feature/07-details-tab`
+
+## What to build
+
+- `DetailsTabView.swift` — `List` with `.insetGrouped` style, `UnitLabel`, all sections, disclaimer footnote
+- Section views (each in own file):
+  - `MacronutrientsSectionView.swift`
+  - `VitaminsSectionView.swift`
+  - `MineralsSectionView.swift`
+  - `AllergensSectionView.swift`
+  - `IngredientsSectionView.swift`
+- `NutrientRowView.swift` — reusable row: nutrient name left, value + unit right
+
+Allergens section: shows ""None detected"" when allergens list is empty.
+Ingredients section: shows plain text or ""Not available"".
+Disclaimer text: comes from a constant, not hardcoded in the view.
+
+## Coding Convention Requirements
+
+- Each section view in its own file (one type per file)
+- Each file has `#Preview` with mock data
+- Indented sub-rows use `padding(.leading)`
+- Disclaimer from a constant
+
+## TDD
+
+- `testNutrientRowView_displaysNutrientName`
+- `testNutrientRowView_displaysNutrientAmount`
+- `testAllergensSectionView_emptyAllergens_showsNoneDetected`
+
+## Done When
+
+- [ ] All sections render correctly with mock data
+- [ ] Disclaimer visible at bottom
+- [ ] All section views in separate files with `#Preview`
+- [ ] Zero SwiftLint warnings","P1,ui,results",v1.0
+ISSUE-08 — Build ErrorView with follow-up questions,"**Epic:** Error Handling
+**User Story:** US-11, US-12
+**Depends on:** ISSUE-04
+**Priority:** P1
+**Branch:** `feature/08-error-view`
+
+## What to build
+
+- `ErrorView.swift` — friendly error message, 1–3 follow-up question fields, ""Try Again"" button, back button
+- `FollowUpQuestionView.swift` — reusable view for a single follow-up question + `TextField`
+
+Error message: ""We couldn't identify this food. Let's try to narrow it down."" (from a constant)
+
+## Coding Convention Requirements
+
+- `ErrorView` and `FollowUpQuestionView` in separate files with `#Preview`
+- `@State private var answerTexts: [String]` for storing answers
+- Error message text from a constant
+- No raw API error text shown to user
+
+## TDD
+
+- `testFollowUpQuestionView_displaysQuestionText`
+- `testErrorView_emptyFollowUpQuestions_showsNoQuestionFields`
+
+## Done When
+
+- [ ] `ErrorView` renders with sample questions in preview
+- [ ] ""Try Again"" button calls `onRetry`
+- [ ] Both files have `#Preview`
+- [ ] Zero SwiftLint warnings","P1,ui,error-handling",v1.0
+ISSUE-09 — Implement OpenAI text search service,"**Epic:** AI Engine
+**User Story:** US-13
+**Depends on:** ISSUE-02
+**Priority:** P1
+**Branch:** `feature/09-openai-text-service`
+
+## What to build
+
+- `Secrets.xcconfig` — at project root with `OPENAI_API_KEY = <your-key>`. Add to `.gitignore`. **Never commit the key.**
+- `OpenAIService.swift` — conforms to `AIServiceProtocol`, implements `lookupNutrition(query:)`, calls OpenAI chat completions endpoint with `async/await`, reads API key from `Bundle.main.infoDictionary`
+- `NutritionFactsResponseParser.swift` — `struct` responsible only for parsing raw API JSON into `NutritionFacts` or `AppError`
+
+On unrecognized product: parse follow-up questions and throw `AppError.productNotFound(followUpQuestions:)`.
+
+## Coding Convention Requirements
+
+- `OpenAIService` and `NutritionFactsResponseParser` in separate files (Single Responsibility)
+- No force unwrap, no force try, no force cast
+- API key only via `.xcconfig` — never in source code
+- All networking uses `async/await`
+- `@MainActor` on ViewModel methods that update state
+
+## TDD (use mock URLSession or `NetworkSession` protocol)
+
+- `testLookupNutrition_validQuery_returnsNutritionFacts`
+- `testLookupNutrition_unknownProduct_throwsProductNotFound`
+- `testNutritionFactsResponseParser_validJSON_parsesProductName`
+- `testNutritionFactsResponseParser_missingFields_throwsParsingError`
+
+## Done When
+
+- [ ] Typing ""Apple"" returns real nutrition facts from OpenAI (manual test)
+- [ ] Unrecognized query returns follow-up questions (manual test)
+- [ ] All four unit tests pass using mocks
+- [ ] Zero SwiftLint warnings","P1,ai,networking",v1.0
+ISSUE-10 — Implement connectivity detection and AI provider switching,"**Epic:** AI Engine
+**User Story:** US-13, US-14
+**Depends on:** ISSUE-09
+**Priority:** P1
+**Branch:** `feature/10-connectivity-ai-switching`
+
+## What to build
+
+- `ConnectivityMonitoring.swift` — `protocol ConnectivityMonitoring` with `var isOnline: Bool { get }`
+- `ConnectivityMonitor.swift` — `final class ConnectivityMonitor: ConnectivityMonitoring` using `NWPathMonitor`, `private(set) var isOnline: Bool`
+- `AIAgentService.swift` — `final class AIAgentService: AIServiceProtocol`, injected with `onlineService`, `offlineService`, and `connectivityMonitor`, delegates to appropriate service automatically
+- `AppleIntelligenceService.swift` — stub that throws `AppError.aiUnavailable` (full implementation in ISSUE-14)
+
+## Coding Convention Requirements
+
+- Four separate files
+- `AIAgentService` depends only on protocols (Dependency Inversion)
+- `ConnectivityMonitor` uses `private(set)` for `isOnline`
+
+## TDD
+
+- `testAIAgentService_whenOnline_usesOnlineService`
+- `testAIAgentService_whenOffline_usesOfflineService`
+- `testAIAgentService_bothServicesFail_throwsAIUnavailable`
+
+## Done When
+
+- [ ] Turning off Wi-Fi uses `AppleIntelligenceService` automatically
+- [ ] All three tests pass using mocks
+- [ ] Zero SwiftLint warnings","P1,ai,networking",v1.0
+ISSUE-11 — Add Info.plist permission entries,"**Epic:** Permissions
+**User Story:** US-15, US-16
+**Depends on:** ISSUE-03
+**Priority:** P1
+**Branch:** `feature/11-permissions`
+
+## What to build
+
+Add to `Info.plist`:
+- `NSMicrophoneUsageDescription` — ""NutriFacts needs microphone access to transcribe your spoken food name.""
+- `NSSpeechRecognitionUsageDescription` — ""NutriFacts uses speech recognition to convert your voice into text.""
+- `NSCameraUsageDescription` — ""NutriFacts uses your camera to identify food or read nutrition labels.""
+- `NSPhotoLibraryUsageDescription` — ""NutriFacts accesses your photo library so you can choose a food photo.""
+
+Add inline permission-denied alerts in `HomeView` with ""Go to Settings"" button for each denied permission.
+
+## Coding Convention Requirements
+
+- Permission-denied alert text from string constants — not hardcoded inline
+- No force unwrap when opening Settings URL
+
+## Manual Test Checklist
+
+- [ ] Microphone dialog appears on first mic tap
+- [ ] Camera dialog appears on first camera tap
+- [ ] Photo library dialog appears on first library access
+- [ ] Denying any permission shows graceful inline message
+
+## Done When
+
+- [ ] All four `Info.plist` entries present
+- [ ] Denying any permission does not crash the app
+- [ ] Clear inline message shown on denial
+- [ ] Zero SwiftLint warnings","P1,permissions",v1.0
+ISSUE-12 — Implement speech dictation input,"**Epic:** Speech Input
+**User Story:** US-03, US-04
+**Depends on:** ISSUE-11
+**Priority:** P1
+**Branch:** `feature/12-speech-dictation`
+
+## What to build
+
+- `SpeechRecognitionService.swift` — `final class SpeechRecognitionService` using `SFSpeechRecognizer` with `en-US` locale
+  - `func startRecording() async throws` — updates `transcribedText: String` in real time
+  - `func stopRecording()`
+- Update `NutritionViewModel`:
+  - `func startDictation() async` — binds `transcribedText` to `searchText`
+  - `func stopDictation()` — sets `isRecording = false`
+- Update mic button in `SearchBarView`:
+  - Active: red tint + pulse animation (respects Reduce Motion)
+  - Inactive: `ThemeColor.accent` tint
+
+## Coding Convention Requirements
+
+- `SpeechRecognitionService` in its own file
+- `async/await` only — no Combine or callbacks
+- Locale: `Locale(identifier: ""en-US"")`
+- Pulse animation via `withAnimation`
+
+## TDD
+
+- `testStartDictation_setsIsRecordingToTrue`
+- `testStopDictation_setsIsRecordingToFalse`
+- `testStartDictation_updatesSearchText`
+
+## Done When
+
+- [ ] Speaking fills the search bar with transcription
+- [ ] Stopping recording leaves text ready to submit
+- [ ] Mic button shows correct active/inactive state
+- [ ] All three tests pass
+- [ ] Zero SwiftLint warnings","P1,speech-input",v1.0
+ISSUE-13 — Implement photo input (camera + library),"**Epic:** Photo Input
+**User Story:** US-05, US-06
+**Depends on:** ISSUE-11
+**Priority:** P1
+**Branch:** `feature/13-photo-input`
+
+## What to build
+
+- Update camera button to show `confirmationDialog` with ""Take Photo"" and ""Choose from Library""
+- `CameraPickerView.swift` — `struct CameraPickerView: UIViewControllerRepresentable` wrapping `UIImagePickerController` with `.camera` source
+- On image selection: call `NutritionViewModel.analyzePhoto(_ selectedImage: UIImage)`
+- `analyzePhoto` sets `appState = .loading` and calls `aiService.lookupNutrition(image:)` (stub — real vision in ISSUE-15)
+
+## Coding Convention Requirements
+
+- `CameraPickerView` in its own file
+- No force unwrap on camera source check
+- Image passed as `UIImage`
+- Permission denial handled gracefully
+
+## TDD
+
+- `testAnalyzePhoto_setsStateToLoading`
+- `testAnalyzePhoto_onSuccess_setsStateToSuccess`
+- `testAnalyzePhoto_onError_setsStateToError`
+
+## Done When
+
+- [ ] User can take or pick a photo and app enters loading state
+- [ ] Permission denial handled gracefully
+- [ ] All three tests pass
+- [ ] Zero SwiftLint warnings","P1,photo-input",v1.0
+ISSUE-14 — Implement Apple Intelligence offline service,"**Epic:** AI Engine
+**User Story:** US-14
+**Depends on:** ISSUE-10
+**Priority:** P2
+**Branch:** `feature/14-apple-intelligence-service`
+
+## What to build
+
+- Implement `AppleIntelligenceService.lookupNutrition(query:)` using Apple's `FoundationModels` framework with `@Generable` macro for structured output
+- For photo input offline: use `VNRecognizeTextRequest` (label OCR) and `VNClassifyImageRequest` (food identification) via a separate `VisionAnalysisService.swift`
+- If Apple Intelligence unavailable on device, throw `AppError.aiUnavailable`
+
+## Coding Convention Requirements
+
+- OCR/classification in `VisionAnalysisService.swift` (Single Responsibility)
+- Graceful handling of `FoundationModels` unavailability
+- No force unwrap on Vision results
+
+## TDD
+
+- `testAppleIntelligenceService_unavailable_throwsAIUnavailable`
+- `testAppleIntelligenceService_validQuery_returnsNutritionFacts` (integration test — mark as slow)
+
+## Done When
+
+- [ ] With internet off, ""Banana"" returns nutrition data from on-device model (supported device)
+- [ ] Unavailable model shows ""AI unavailable"" error message
+- [ ] Tests pass
+- [ ] Zero SwiftLint warnings","P2,ai,offline",v1.0
+ISSUE-15 — Implement OpenAI photo/vision lookup,"**Epic:** Photo Input
+**User Story:** US-05, US-06, US-07
+**Depends on:** ISSUE-13, ISSUE-09
+**Priority:** P2
+**Branch:** `feature/15-openai-vision`
+
+## What to build
+
+- Implement `OpenAIService.lookupNutrition(image: UIImage) async throws -> NutritionFacts`:
+  - Resize image to max 1024px on longest side before encoding
+  - Base64-encode as JPEG and send as multimodal message to GPT-4o
+  - Reuse `NutritionFactsResponseParser` from ISSUE-09
+- `UIImage+Resize.swift` — extension with `func resized(toMaxDimension maxDimension: CGFloat) -> UIImage`
+
+## Coding Convention Requirements
+
+- Image resizing in `UIImage+Resize.swift` — not inside `OpenAIService` (Single Responsibility)
+- No force unwrap on `UIImage` to `Data` conversion
+- Base64 encoding as a single private method inside `OpenAIService`
+
+## TDD
+
+- `testUIImageResize_largeImage_reducesToMaxDimension`
+- `testLookupNutrition_image_callsVisionEndpoint`
+- `testLookupNutrition_image_validResponse_returnsNutritionFacts`
+
+## Done When
+
+- [ ] Photo of apple returns apple nutrition facts (manual test)
+- [ ] Photo of nutrition label returns extracted normalized values (manual test)
+- [ ] All three unit tests pass
+- [ ] Zero SwiftLint warnings","P2,ai,photo-input",v1.0
