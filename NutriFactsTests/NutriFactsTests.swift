@@ -684,6 +684,75 @@ struct OpenAIRequestBuilderTests {
     }
 }
 
+// MARK: - AI Agent Service Tests
+
+@Suite("AI Agent Service")
+struct AIAgentServiceTests {
+
+    private func makeFacts(name: String = "Apple") -> NutritionFacts {
+        NutritionFacts(
+            productName: name,
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0, transFat: 0.0,
+                carbohydrates: 14, sugar: 10, dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+    }
+
+    @Test("uses online service when connectivity reports online")
+    func testAIAgentService_whenOnline_usesOnlineService() async throws {
+        let onlineFacts = makeFacts(name: "OnlineResult")
+        let onlineService = MockAIService(result: .success(onlineFacts))
+        let offlineService = MockAIService(result: .failure(AppError.aiUnavailable))
+        let connectivityMonitor = MockConnectivityMonitor(isOnline: true)
+        let agentService = AIAgentService(
+            onlineService: onlineService,
+            offlineService: offlineService,
+            connectivityMonitor: connectivityMonitor
+        )
+        let result = try await agentService.lookupNutrition(query: "Apple")
+        #expect(result.productName == "OnlineResult")
+    }
+
+    @Test("uses offline service when connectivity reports offline")
+    func testAIAgentService_whenOffline_usesOfflineService() async throws {
+        let offlineFacts = makeFacts(name: "OfflineResult")
+        let onlineService = MockAIService(result: .failure(AppError.networkError(URLError(.notConnectedToInternet))))
+        let offlineService = MockAIService(result: .success(offlineFacts))
+        let connectivityMonitor = MockConnectivityMonitor(isOnline: false)
+        let agentService = AIAgentService(
+            onlineService: onlineService,
+            offlineService: offlineService,
+            connectivityMonitor: connectivityMonitor
+        )
+        let result = try await agentService.lookupNutrition(query: "Apple")
+        #expect(result.productName == "OfflineResult")
+    }
+
+    @Test("throws aiUnavailable when both services fail")
+    func testAIAgentService_bothServicesFail_throwsAIUnavailable() async {
+        let onlineService = MockAIService(result: .failure(AppError.networkError(URLError(.notConnectedToInternet))))
+        let offlineService = MockAIService(result: .failure(AppError.aiUnavailable))
+        let connectivityMonitor = MockConnectivityMonitor(isOnline: false)
+        let agentService = AIAgentService(
+            onlineService: onlineService,
+            offlineService: offlineService,
+            connectivityMonitor: connectivityMonitor
+        )
+        var didThrowAIUnavailable = false
+        do {
+            _ = try await agentService.lookupNutrition(query: "Unknown")
+        } catch AppError.aiUnavailable {
+            didThrowAIUnavailable = true
+        } catch {
+            // unexpected error
+        }
+        #expect(didThrowAIUnavailable)
+    }
+}
+
 
 
 
