@@ -32,11 +32,17 @@ final class NutritionViewModel {
     // MARK: - Private Dependencies
 
     private let aiService: AIServiceProtocol
+    private let speechService: SpeechRecognitionServiceProtocol
+    private var dictationTask: Task<Void, Never>?
 
     // MARK: - Init
 
-    init(aiService: AIServiceProtocol) {
+    init(
+        aiService: AIServiceProtocol,
+        speechService: SpeechRecognitionServiceProtocol = SpeechRecognitionService()
+    ) {
         self.aiService = aiService
+        self.speechService = speechService
     }
 
     // MARK: - Search
@@ -81,5 +87,37 @@ final class NutritionViewModel {
         } catch {
             appState = .error(error as? AppError ?? .parsingError)
         }
+    }
+
+    // MARK: - Dictation
+
+    /// Starts a speech recognition session. Sets isRecording to true immediately, then consumes the
+    /// transcription stream in the background, updating searchText with each new result.
+    @MainActor
+    func startDictation() async {
+        guard !isRecording else { return }
+        do {
+            let transcriptionStream = try await speechService.startRecording()
+            isRecording = true
+            dictationTask = Task { @MainActor [weak self] in
+                for await transcription in transcriptionStream {
+                    guard let self, !Task.isCancelled else { break }
+                    self.searchText = transcription
+                }
+                self?.isRecording = false
+            }
+        } catch {
+            // Permission denied or recognizer unavailable — stop silently
+            isRecording = false
+        }
+    }
+
+    /// Stops the active speech recognition session.
+    @MainActor
+    func stopDictation() {
+        dictationTask?.cancel()
+        dictationTask = nil
+        speechService.stopRecording()
+        isRecording = false
     }
 }
