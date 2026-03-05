@@ -1,21 +1,17 @@
-//
-//  ContentView.swift
-//  NutriFacts
-//
-//  Created by Prajakta Kulkarni on 05/03/2026.
-//
+// ContentView.swift
+// NutriFacts
 
 import SwiftUI
 
+/// Root container view. Injects NutritionViewModel into the environment
+/// and hosts HomeView as the entry point.
 struct ContentView: View {
+
+    @State private var viewModel = NutritionViewModel(aiService: PreviewAIService())
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        HomeView()
+            .environment(viewModel)
     }
 }
 
