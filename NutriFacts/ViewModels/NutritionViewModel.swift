@@ -61,6 +61,16 @@ final class NutritionViewModel {
         appState = .idle
     }
 
+    /// Retries the search, optionally appending additional context to the original query.
+    /// Used by ErrorView when the user answers follow-up questions.
+    @MainActor
+    func retrySearch(withContext context: String) async {
+        if !context.isEmpty {
+            searchText = "\(searchText), \(context)"
+        }
+        await search()
+    }
+
     /// Sends a photo to the AI service for food identification or label extraction.
     @MainActor
     func analyzePhoto(_ selectedImage: UIImage) async {

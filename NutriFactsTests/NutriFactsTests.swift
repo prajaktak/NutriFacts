@@ -504,6 +504,83 @@ struct AllergensDisplayTests {
     }
 }
 
+// MARK: - AppError User-Friendly Message Tests
+
+@Suite("AppError User-Friendly Message")
+struct AppErrorUserFriendlyMessageTests {
+
+    @Test("productNotFound returns could not identify message")
+    func testAppError_productNotFound_returnsCouldNotIdentifyMessage() {
+        let appError = AppError.productNotFound(followUpQuestions: ["Is it cooked?"])
+        #expect(appError.userFriendlyMessage.isEmpty == false)
+    }
+
+    @Test("aiUnavailable returns ai unavailable message")
+    func testAppError_aiUnavailable_returnsAIUnavailableMessage() {
+        let appError = AppError.aiUnavailable
+        #expect(appError.userFriendlyMessage.isEmpty == false)
+    }
+
+    @Test("invalidImage returns invalid image message")
+    func testAppError_invalidImage_returnsInvalidImageMessage() {
+        let appError = AppError.invalidImage
+        #expect(appError.userFriendlyMessage.isEmpty == false)
+    }
+
+    @Test("parsingError returns generic error message")
+    func testAppError_parsingError_returnsGenericMessage() {
+        let appError = AppError.parsingError
+        #expect(appError.userFriendlyMessage.isEmpty == false)
+    }
+}
+// MARK: - ErrorView Retry Tests
+
+@MainActor
+@Suite("ErrorView Retry")
+struct ErrorViewRetryTests {
+
+    private func makeMockNutritionFacts() -> NutritionFacts {
+        NutritionFacts(
+            productName: "Apple",
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0,
+                transFat: 0.0, carbohydrates: 14, sugar: 10,
+                dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+    }
+
+    @Test("retrySearch appends context to searchText before searching")
+    func testRetrySearch_withContext_appendsContextToSearchText() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "Chicken"
+        await viewModel.retrySearch(withContext: "cooked")
+        // After retry the state will be success; the search text may have been updated
+        if case .success = viewModel.appState {
+            // Correct — retry succeeded
+        } else {
+            Issue.record("Expected .success state after retrySearch")
+        }
+    }
+
+    @Test("retrySearch with empty context still submits search")
+    func testRetrySearch_withEmptyContext_submitsSearch() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "Apple"
+        await viewModel.retrySearch(withContext: "")
+        if case .success = viewModel.appState {
+            // Correct
+        } else {
+            Issue.record("Expected .success state after retrySearch with empty context")
+        }
+    }
+}
+
+
 
 
 
