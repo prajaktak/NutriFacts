@@ -14,6 +14,8 @@ struct HomeView: View {
     @State private var isCameraAlertPresented = false
     @State private var isPhotoLibraryAlertPresented = false
     @State private var isSpeechRecognitionAlertPresented = false
+    @State private var isPhotoSourceDialogPresented = false
+    @State private var selectedPhotoSource: UIImagePickerController.SourceType?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -63,6 +65,21 @@ struct HomeView: View {
                 permissionAlertButtons
             } message: {
                 Text(PermissionStrings.speechRecognitionDeniedMessage)
+            }
+            .confirmationDialog("Search by Photo", isPresented: $isPhotoSourceDialogPresented) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Take Photo") { selectedPhotoSource = .camera }
+                }
+                Button("Choose from Library") { selectedPhotoSource = .photoLibrary }
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(item: $selectedPhotoSource) { sourceType in
+                CameraPickerView(sourceType: sourceType) { selectedImage in
+                    Task { await viewModel.analyzePhoto(selectedImage) }
+                } onDismiss: {
+                    selectedPhotoSource = nil
+                }
+                .ignoresSafeArea()
             }
         }
     }
@@ -131,9 +148,7 @@ struct HomeView: View {
             .disabled(viewModel.isLoading)
 
             Button {
-                // Photo input — wired in ISSUE-13
-                // Shows permission-denied alert if camera or photo library access is denied
-                isCameraAlertPresented = true
+                isPhotoSourceDialogPresented = true
             } label: {
                 Image(systemName: "camera.fill")
                     .font(.title2)
@@ -193,6 +208,12 @@ private extension NutritionViewModel {
         if case .loading = appState { return true }
         return false
     }
+}
+
+// MARK: - UIImagePickerController.SourceType + Identifiable
+
+extension UIImagePickerController.SourceType: @retroactive Identifiable {
+    public var id: Int { rawValue }
 }
 
 #Preview {
