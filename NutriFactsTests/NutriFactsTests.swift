@@ -808,6 +808,63 @@ struct SpeechDictationTests {
     }
 }
 
+// MARK: - Photo Input Tests
+
+@Suite("Photo Input")
+@MainActor
+struct PhotoInputTests {
+
+    private func makeFacts(name: String = "Apple") -> NutritionFacts {
+        NutritionFacts(
+            productName: name,
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0, transFat: 0.0,
+                carbohydrates: 14, sugar: 10, dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+    }
+
+    @Test("analyzePhoto sets appState to loading before awaiting service")
+    func testAnalyzePhoto_setsStateToLoading() async {
+        // Use a never-resolving service to catch the loading state
+        let slowService = SlowMockAIService()
+        let viewModel = NutritionViewModel(aiService: slowService)
+        let analyzeTask = Task { await viewModel.analyzePhoto(UIImage()) }
+        // Yield once so analyzePhoto sets appState = .loading
+        await Task.yield()
+        let isLoading: Bool
+        if case .loading = viewModel.appState { isLoading = true } else { isLoading = false }
+        #expect(isLoading)
+        slowService.complete(with: .success(makeFacts()))
+        await analyzeTask.value
+    }
+
+    @Test("analyzePhoto on success sets appState to success")
+    func testAnalyzePhoto_photo_onSuccess_setsStateToSuccess() async {
+        let facts = makeFacts(name: "Salmon")
+        let viewModel = NutritionViewModel(aiService: MockAIService(result: .success(facts)))
+        await viewModel.analyzePhoto(UIImage())
+        if case .success(let result) = viewModel.appState {
+            #expect(result.productName == "Salmon")
+        } else {
+            Issue.record("Expected success state")
+        }
+    }
+
+    @Test("analyzePhoto on error sets appState to error")
+    func testAnalyzePhoto_photo_onError_setsStateToError() async {
+        let viewModel = NutritionViewModel(aiService: MockAIService(result: .failure(AppError.invalidImage)))
+        await viewModel.analyzePhoto(UIImage())
+        if case .error(let appError) = viewModel.appState {
+            if case .invalidImage = appError { } else { Issue.record("Expected invalidImage error") }
+        } else {
+            Issue.record("Expected error state")
+        }
+    }
+}
+
 
 
 
