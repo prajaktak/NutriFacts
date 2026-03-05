@@ -357,5 +357,46 @@ struct NavigationStateTests {
     }
 }
 
+// MARK: - ResultsView Unit Label Tests
+
+@Suite("ResultsView Unit Label")
+struct ResultsViewUnitLabelTests {
+
+    @Test("unit label is per 100g for solid food")
+    func testUnitLabel_solidFood_showsPer100g() {
+        let nutritionFacts = NutritionFacts(
+            productName: "Apple",
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0,
+                transFat: 0.0, carbohydrates: 14, sugar: 10,
+                dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+        #expect(nutritionFacts.unitLabel == "per 100g")
+    }
+    @Test("unit label is per 100ml for liquid food")
+    func testUnitLabel_liquidFood_showsPer100ml() {
+        let nutritionFacts = NutritionFacts(
+            productName: "Oat milk",
+            isLiquid: true,
+            macronutrients: Macronutrients(
+                calories: 42, totalFat: 0.1, saturatedFat: 0.0,
+                transFat: 0.0, carbohydrates: 10, sugar: 9,
+                dietaryFiber: 0.0, protein: 0.5
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+        #expect(nutritionFacts.unitLabel == "per 100ml")
+    }
+
+    @Test("default selected tab is overview")
+    func testResultsTabSelection_default_isOverview() {
+        #expect(ResultsTabSelection.defaultTab == .overview)
+    }
+}
+
+
 
 
