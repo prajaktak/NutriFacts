@@ -753,6 +753,61 @@ struct AIAgentServiceTests {
     }
 }
 
+// MARK: - Speech Dictation Tests
+
+@Suite("Speech Dictation")
+@MainActor
+struct SpeechDictationTests {
+
+    @Test("startDictation sets isRecording to true")
+    func testStartDictation_setsIsRecordingToTrue() async {
+        let mockSpeech = MockSpeechRecognitionService()
+        let viewModel = NutritionViewModel(
+            aiService: MockAIService(result: .success(makeFacts())),
+            speechService: mockSpeech
+        )
+        await viewModel.startDictation()
+        #expect(viewModel.isRecording == true)
+    }
+
+    @Test("stopDictation sets isRecording to false")
+    func testStopDictation_setsIsRecordingToFalse() async {
+        let mockSpeech = MockSpeechRecognitionService()
+        let viewModel = NutritionViewModel(
+            aiService: MockAIService(result: .success(makeFacts())),
+            speechService: mockSpeech
+        )
+        await viewModel.startDictation()
+        viewModel.stopDictation()
+        #expect(viewModel.isRecording == false)
+    }
+
+    @Test("startDictation updates searchText from transcription")
+    func testStartDictation_updatesSearchText() async {
+        let mockSpeech = MockSpeechRecognitionService(transcribedText: "Banana")
+        let viewModel = NutritionViewModel(
+            aiService: MockAIService(result: .success(makeFacts())),
+            speechService: mockSpeech
+        )
+        await viewModel.startDictation()
+        // Yield to allow the background dictation task to consume the stream
+        await Task.yield()
+        #expect(viewModel.searchText == "Banana")
+    }
+
+    private func makeFacts() -> NutritionFacts {
+        NutritionFacts(
+            productName: "Apple",
+            isLiquid: false,
+            macronutrients: Macronutrients(
+                calories: 52, totalFat: 0.2, saturatedFat: 0.0, transFat: 0.0,
+                carbohydrates: 14, sugar: 10, dietaryFiber: 2.4, protein: 0.3
+            ),
+            vitamins: [], minerals: [], allergens: [], ingredients: nil
+        )
+    }
+}
+
 
 
 

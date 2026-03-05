@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var isPhotoLibraryAlertPresented = false
     @State private var isSpeechRecognitionAlertPresented = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         @Bindable var bindableViewModel = viewModel
         NavigationStack {
@@ -108,16 +110,22 @@ struct HomeView: View {
     private var inputButtonsRow: some View {
         HStack(spacing: 32) {
             Button {
-                // Speech input — wired in ISSUE-12
-                // Shows permission-denied alert if microphone or speech recognition access is denied
-                isMicrophoneAlertPresented = true
+                if viewModel.isRecording {
+                    viewModel.stopDictation()
+                } else {
+                    Task { await viewModel.startDictation() }
+                }
             } label: {
                 Image(systemName: "mic.fill")
                     .font(.title2)
                     .foregroundStyle(viewModel.isRecording ? ThemeColor.error : ThemeColor.accent)
-                    .scaleEffect(viewModel.isRecording ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true),
-                               value: viewModel.isRecording)
+                    .scaleEffect(viewModel.isRecording && !reduceMotion ? 1.2 : 1.0)
+                    .animation(
+                        viewModel.isRecording && !reduceMotion
+                            ? .easeInOut(duration: 0.6).repeatForever(autoreverses: true)
+                            : .default,
+                        value: viewModel.isRecording
+                    )
             }
             .accessibilityLabel(viewModel.isRecording ? "Stop recording" : "Search by voice")
             .disabled(viewModel.isLoading)
