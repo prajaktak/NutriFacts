@@ -397,6 +397,61 @@ struct ResultsViewUnitLabelTests {
     }
 }
 
+// MARK: - MacroPieSlice Tests
+
+@Suite("MacroPieSlice")
+struct MacroPieSliceTests {
+
+    private let macronutrients = Macronutrients(
+        calories: 52,
+        totalFat: 0.2,
+        saturatedFat: 0.0,
+        transFat: 0.0,
+        carbohydrates: 14,
+        sugar: 10,
+        dietaryFiber: 2.4,
+        protein: 0.3
+    )
+
+    @Test("slices contain carbs, protein and fat")
+    func testMacroPieSlices_fromMacronutrients_containsThreeSlices() {
+        let slices = MacroPieSlice.slices(from: macronutrients)
+        #expect(slices.count == 3)
+    }
+    @Test("carbs slice has correct gram value")
+    func testMacroPieSlice_carbs_hasCorrectGrams() {
+        let slices = MacroPieSlice.slices(from: macronutrients)
+        let carbsSlice = slices.first { $0.macroLabel == "Carbs" }
+        #expect(carbsSlice?.gramValue == 14)
+    }
+
+    @Test("protein slice has correct gram value")
+    func testMacroPieSlice_protein_hasCorrectGrams() {
+        let slices = MacroPieSlice.slices(from: macronutrients)
+        let proteinSlice = slices.first { $0.macroLabel == "Protein" }
+        #expect(proteinSlice?.gramValue == 0.3)
+    }
+
+    @Test("fat slice has correct gram value")
+    func testMacroPieSlice_fat_hasCorrectGrams() {
+        let slices = MacroPieSlice.slices(from: macronutrients)
+        let fatSlice = slices.first { $0.macroLabel == "Fat" }
+        #expect(fatSlice?.gramValue == 0.2)
+    }
+
+    @Test("slices with all zero values produce three slices with zero grams")
+    func testMacroPieSlice_allZeros_producesThreeZeroSlices() {
+        let zeroMacros = Macronutrients(
+            calories: 0, totalFat: 0, saturatedFat: 0,
+            transFat: 0, carbohydrates: 0, sugar: 0,
+            dietaryFiber: 0, protein: 0
+        )
+        let slices = MacroPieSlice.slices(from: zeroMacros)
+        #expect(slices.allSatisfy { $0.gramValue == 0 })
+    }
+}
+
+
 
 
 
