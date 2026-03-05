@@ -15,6 +15,20 @@ final class NutritionViewModel {
     var searchText: String = ""
     var isRecording: Bool = false
 
+    // MARK: - Navigation Computed Properties
+
+    /// True when the app state is `.success` — drives navigation to ResultsView.
+    var isShowingResults: Bool {
+        if case .success = appState { return true }
+        return false
+    }
+
+    /// True when the app state is `.error` — drives navigation to ErrorView.
+    var isShowingError: Bool {
+        if case .error = appState { return true }
+        return false
+    }
+
     // MARK: - Private Dependencies
 
     private let aiService: AIServiceProtocol

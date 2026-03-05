@@ -285,4 +285,77 @@ struct HomeViewBehaviorTests {
     }
 }
 
+// MARK: - Navigation State Tests
+
+@MainActor
+@Suite("Navigation State")
+struct NavigationStateTests {
+    private func makeMockNutritionFacts(productName: String = "Apple") -> NutritionFacts {
+        let macronutrients = Macronutrients(
+            calories: 52,
+            totalFat: 0.2,
+            saturatedFat: 0.0,
+            transFat: 0.0,
+            carbohydrates: 14,
+            sugar: 10,
+            dietaryFiber: 2.4,
+            protein: 0.3
+        )
+        return NutritionFacts(
+            productName: productName,
+            isLiquid: false,
+            macronutrients: macronutrients,
+            vitamins: [],
+            minerals: [],
+            allergens: [],
+            ingredients: nil
+        )
+    }
+
+    @Test("appState success means navigation destination is results")
+    func testAppState_success_navigationDestinationIsResults() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "Apple"
+        await viewModel.search()
+        if case .success = viewModel.appState {
+            #expect(viewModel.isShowingResults)
+        } else {
+            Issue.record("Expected .success state")
+        }
+    }
+
+    @Test("appState error means navigation destination is error")
+    func testAppState_error_navigationDestinationIsError() async {
+        let mockService = MockAIService(result: .failure(AppError.productNotFound(followUpQuestions: ["Is it cooked?"])))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "XYZ"
+        await viewModel.search()
+        if case .error = viewModel.appState {
+            #expect(viewModel.isShowingError)
+        } else {
+            Issue.record("Expected .error state")
+        }
+    }
+
+    @Test("appState idle means no navigation destination is active")
+    func testAppState_idle_noNavigationDestination() {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        #expect(!viewModel.isShowingResults)
+        #expect(!viewModel.isShowingError)
+    }
+
+    @Test("clearSearch dismisses results navigation")
+    func testClearSearch_dismissesResultsNavigation() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "Apple"
+        await viewModel.search()
+        viewModel.clearSearch()
+        #expect(!viewModel.isShowingResults)
+    }
+}
+
+
 

@@ -4,7 +4,7 @@
 import SwiftUI
 
 /// Root screen of the app. Provides text, mic, and camera input controls,
-/// and shows the appropriate state (idle, loading) based on the ViewModel.
+/// and navigates to ResultsView on success or ErrorView on error.
 struct HomeView: View {
 
     @Environment(NutritionViewModel.self) private var viewModel
@@ -30,6 +30,50 @@ struct HomeView: View {
             }
             .navigationTitle("NutriFacts")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: isShowingResultsBinding) {
+                resultsDestination
+            }
+            .navigationDestination(isPresented: isShowingErrorBinding) {
+                errorDestination
+            }
+        }
+    }
+
+    // MARK: - Navigation Bindings
+
+    /// Binding that reads from viewModel.isShowingResults and clears state on dismiss.
+    private var isShowingResultsBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isShowingResults },
+            set: { isPresented in
+                if !isPresented { viewModel.clearSearch() }
+            }
+        )
+    }
+
+    /// Binding that reads from viewModel.isShowingError and clears state on dismiss.
+    private var isShowingErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isShowingError },
+            set: { isPresented in
+                if !isPresented { viewModel.clearSearch() }
+            }
+        )
+    }
+
+    // MARK: - Navigation Destinations
+
+    @ViewBuilder
+    private var resultsDestination: some View {
+        if case .success(let nutritionFacts) = viewModel.appState {
+            ResultsView(nutritionFacts: nutritionFacts)
+        }
+    }
+
+    @ViewBuilder
+    private var errorDestination: some View {
+        if case .error(let appError) = viewModel.appState {
+            ErrorView(appError: appError)
         }
     }
 
@@ -40,7 +84,7 @@ struct HomeView: View {
             Button {
                 // Speech input — wired in ISSUE-12
             } label: {
-                Image(systemName: viewModel.isRecording ? "mic.fill" : "mic.fill")
+                Image(systemName: "mic.fill")
                     .font(.title2)
                     .foregroundStyle(viewModel.isRecording ? ThemeColor.error : ThemeColor.accent)
                     .scaleEffect(viewModel.isRecording ? 1.2 : 1.0)
@@ -72,11 +116,8 @@ struct HomeView: View {
             }
         case .loading:
             LoadingView(searchText: viewModel.searchText)
-        case .success:
-            // Navigation to ResultsView is handled in ContentView (ISSUE-04)
-            EmptyView()
-        case .error:
-            // Navigation to ErrorView is handled in ContentView (ISSUE-04)
+        case .success, .error:
+            // Handled by navigationDestination above
             EmptyView()
         }
     }
