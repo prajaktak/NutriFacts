@@ -2,12 +2,18 @@
 // NutriFacts
 
 import SwiftUI
+import UIKit
 
 /// Root screen of the app. Provides text, mic, and camera input controls,
 /// and navigates to ResultsView on success or ErrorView on error.
 struct HomeView: View {
 
     @Environment(NutritionViewModel.self) private var viewModel
+
+    @State private var isMicrophoneAlertPresented = false
+    @State private var isCameraAlertPresented = false
+    @State private var isPhotoLibraryAlertPresented = false
+    @State private var isSpeechRecognitionAlertPresented = false
 
     var body: some View {
         @Bindable var bindableViewModel = viewModel
@@ -35,6 +41,26 @@ struct HomeView: View {
             }
             .navigationDestination(isPresented: isShowingErrorBinding) {
                 errorDestination
+            }
+            .alert(PermissionStrings.microphoneDeniedTitle, isPresented: $isMicrophoneAlertPresented) {
+                permissionAlertButtons
+            } message: {
+                Text(PermissionStrings.microphoneDeniedMessage)
+            }
+            .alert(PermissionStrings.cameraDeniedTitle, isPresented: $isCameraAlertPresented) {
+                permissionAlertButtons
+            } message: {
+                Text(PermissionStrings.cameraDeniedMessage)
+            }
+            .alert(PermissionStrings.photoLibraryDeniedTitle, isPresented: $isPhotoLibraryAlertPresented) {
+                permissionAlertButtons
+            } message: {
+                Text(PermissionStrings.photoLibraryDeniedMessage)
+            }
+            .alert(PermissionStrings.speechRecognitionDeniedTitle, isPresented: $isSpeechRecognitionAlertPresented) {
+                permissionAlertButtons
+            } message: {
+                Text(PermissionStrings.speechRecognitionDeniedMessage)
             }
         }
     }
@@ -83,6 +109,8 @@ struct HomeView: View {
         HStack(spacing: 32) {
             Button {
                 // Speech input — wired in ISSUE-12
+                // Shows permission-denied alert if microphone or speech recognition access is denied
+                isMicrophoneAlertPresented = true
             } label: {
                 Image(systemName: "mic.fill")
                     .font(.title2)
@@ -96,6 +124,8 @@ struct HomeView: View {
 
             Button {
                 // Photo input — wired in ISSUE-13
+                // Shows permission-denied alert if camera or photo library access is denied
+                isCameraAlertPresented = true
             } label: {
                 Image(systemName: "camera.fill")
                     .font(.title2)
@@ -104,6 +134,16 @@ struct HomeView: View {
             .accessibilityLabel("Search by photo")
             .disabled(viewModel.isLoading)
         }
+    }
+
+    @ViewBuilder
+    private var permissionAlertButtons: some View {
+        Button(PermissionStrings.goToSettingsButtonLabel) {
+            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsURL)
+            }
+        }
+        Button(PermissionStrings.cancelButtonLabel, role: .cancel) {}
     }
 
     @ViewBuilder

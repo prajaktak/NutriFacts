@@ -420,6 +420,10 @@
 				DEVELOPMENT_TEAM = F8HDNS2LH8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "NutriFacts uses your camera to identify food or read nutrition labels.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NutriFacts needs microphone access to transcribe your spoken food name.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "NutriFacts accesses your photo library so you can choose a food photo.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "NutriFacts uses speech recognition to convert your voice into text.";
 				INFOPLIST_KEY_OPENAI_API_KEY = "$(OPENAI_API_KEY)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -453,6 +457,10 @@
 				DEVELOPMENT_TEAM = F8HDNS2LH8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "NutriFacts uses your camera to identify food or read nutrition labels.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "NutriFacts needs microphone access to transcribe your spoken food name.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "NutriFacts accesses your photo library so you can choose a food photo.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "NutriFacts uses speech recognition to convert your voice into text.";
 				INFOPLIST_KEY_OPENAI_API_KEY = "$(OPENAI_API_KEY)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
