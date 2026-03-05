@@ -865,7 +865,60 @@ struct PhotoInputTests {
     }
 }
 
+// MARK: - Apple Intelligence Service Tests
 
+@Suite("Apple Intelligence Service")
+@MainActor
+struct AppleIntelligenceServiceTests {
+
+    @Test("lookupNutrition(query:) throws aiUnavailable when model unavailable")
+    func testLookupNutrition_query_throwsAIUnavailable_whenUnavailable() async {
+        let service = AppleIntelligenceService(availability: .unavailable)
+        do {
+            _ = try await service.lookupNutrition(query: "Apple")
+            Issue.record("Expected aiUnavailable error but no error was thrown")
+        } catch let error as AppError {
+            if case .aiUnavailable = error { } else {
+                Issue.record("Expected aiUnavailable but got \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("lookupNutrition(image:) throws aiUnavailable when model unavailable")
+    func testLookupNutrition_image_throwsAIUnavailable_whenUnavailable() async {
+        let service = AppleIntelligenceService(availability: .unavailable)
+        do {
+            _ = try await service.lookupNutrition(image: UIImage())
+            Issue.record("Expected aiUnavailable error but no error was thrown")
+        } catch let error as AppError {
+            if case .aiUnavailable = error { } else {
+                Issue.record("Expected aiUnavailable but got \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("lookupNutrition(image:) throws aiUnavailable when vision returns no text and no classification")
+    func testLookupNutrition_image_throwsAIUnavailable_whenVisionEmpty() async {
+        let service = AppleIntelligenceService(
+            availability: .unavailable,
+            visionService: MockVisionAnalysisService(ocrText: nil, foodLabel: nil)
+        )
+        do {
+            _ = try await service.lookupNutrition(image: UIImage())
+            Issue.record("Expected aiUnavailable error but no error was thrown")
+        } catch let error as AppError {
+            if case .aiUnavailable = error { } else {
+                Issue.record("Expected aiUnavailable but got \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+}
 
 
 
