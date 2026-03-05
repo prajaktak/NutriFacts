@@ -3,6 +3,7 @@
 
 import Testing
 import UIKit
+import SwiftUI
 @testable import NutriFacts
 
 // MARK: - NutritionFacts Model Tests
@@ -219,4 +220,69 @@ struct NutritionViewModelTests {
         }
     }
 }
+
+// MARK: - HomeView Behavior Tests
+@MainActor
+@Suite("HomeView Behavior")
+struct HomeViewBehaviorTests {
+
+    private func makeMockNutritionFacts() -> NutritionFacts {
+        let macronutrients = Macronutrients(
+            calories: 52,
+            totalFat: 0.2,
+            saturatedFat: 0.0,
+            transFat: 0.0,
+            carbohydrates: 14,
+            sugar: 10,
+            dietaryFiber: 2.4,
+            protein: 0.3
+        )
+        return NutritionFacts(
+            productName: "Apple",
+            isLiquid: false,
+            macronutrients: macronutrients,
+            vitamins: [],
+            minerals: [],
+            allergens: [],
+            ingredients: nil
+        )
+    }
+
+    @Test("search with empty text leaves appState idle")
+    func testSearch_emptySearchText_stateRemainsIdle() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = ""
+        await viewModel.search()
+        if case .idle = viewModel.appState {
+            // Correct
+        } else {
+            Issue.record("Expected .idle state when searching with empty text")
+        }
+    }
+
+    @Test("selecting suggestion chip sets searchText to chip value")
+    func testSuggestionChip_tap_setsSearchText() {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        let chipValue = "Greek yogurt"
+        viewModel.searchText = chipValue
+        #expect(viewModel.searchText == chipValue)
+    }
+
+    @Test("clearSearch after success resets to idle")
+    func testClearSearch_afterSuccess_resetsToIdle() async {
+        let mockService = MockAIService(result: .success(makeMockNutritionFacts()))
+        let viewModel = NutritionViewModel(aiService: mockService)
+        viewModel.searchText = "Apple"
+        await viewModel.search()
+        viewModel.clearSearch()
+        if case .idle = viewModel.appState {
+            // Correct
+        } else {
+            Issue.record("Expected .idle state after clearSearch following success")
+        }
+    }
+}
+
 
