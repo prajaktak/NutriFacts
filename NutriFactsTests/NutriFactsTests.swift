@@ -580,6 +580,111 @@ struct ErrorViewRetryTests {
     }
 }
 
+// MARK: - OpenAI Response Parser Tests
+
+@Suite("OpenAI Response Parser")
+struct OpenAIResponseParserTests {
+
+    private let parser = OpenAIResponseParser()
+
+    private func makeSuccessJSON(productName: String = "Apple") -> Data {
+        let jsonString = """
+        {
+          "choices": [{
+            "message": {
+              "content": "{\\"productName\\":\\"\(productName)\\",\\"isLiquid\\":false,\\"macronutrients\\":{\\"calories\\":52,\\"totalFat\\":0.2,\\"saturatedFat\\":0.0,\\"transFat\\":0.0,\\"carbohydrates\\":14,\\"sugar\\":10,\\"dietaryFiber\\":2.4,\\"protein\\":0.3},\\"vitamins\\":[],\\"minerals\\":[],\\"allergens\\":[],\\"ingredients\\":null}"
+            }
+          }]
+        }
+        """
+        return Data(jsonString.utf8)
+    }
+
+    private func makeErrorJSON() -> Data {
+        let jsonString = """
+        {
+          "choices": [{
+            "message": {
+              "content": "{\\"error\\":true,\\"followUpQuestions\\":[\\"Is it raw or cooked?\\",\\"Do you know the brand?\\"]}"
+            }
+          }]
+        }
+        """
+        return Data(jsonString.utf8)
+    }
+
+    @Test("parser decodes valid nutrition facts JSON into NutritionFacts")
+    func testParser_validJSON_returnsNutritionFacts() throws {
+        let nutritionFacts = try parser.parse(responseData: makeSuccessJSON())
+        #expect(nutritionFacts.productName == "Apple")
+    }
+
+    @Test("parser decodes calories correctly from valid JSON")
+    func testParser_validJSON_decodesCaloriesCorrectly() throws {
+        let nutritionFacts = try parser.parse(responseData: makeSuccessJSON())
+        #expect(nutritionFacts.macronutrients.calories == 52)
+    }
+    @Test("parser throws productNotFound when response contains error flag")
+    func testParser_errorJSON_throwsProductNotFound() throws {
+        var didThrowProductNotFound = false
+        do {
+            _ = try parser.parse(responseData: makeErrorJSON())
+        } catch let appError as AppError {
+            if case .productNotFound = appError {
+                didThrowProductNotFound = true
+            }
+        }
+        #expect(didThrowProductNotFound)
+    }
+
+    @Test("parser throws parsingError when response data is empty")
+    func testParser_emptyData_throwsParsingError() throws {
+        var didThrowParsingError = false
+        do {
+            _ = try parser.parse(responseData: Data())
+        } catch let appError as AppError {
+            if case .parsingError = appError {
+                didThrowParsingError = true
+            }
+        }
+        #expect(didThrowParsingError)
+    }
+}
+
+// MARK: - OpenAI Request Builder Tests
+
+@Suite("OpenAI Request Builder")
+struct OpenAIRequestBuilderTests {
+
+    private let builder = OpenAIRequestBuilder(apiKey: "test-key-123")
+
+    @Test("builder sets correct URL for text query")
+    func testBuilder_textQuery_setsCorrectURL() throws {
+        let request = try builder.buildTextRequest(query: "Apple")
+        #expect(request.url?.host == "api.openai.com")
+    }
+
+    @Test("builder sets POST method for text query")
+    func testBuilder_textQuery_setsPostMethod() throws {
+        let request = try builder.buildTextRequest(query: "Apple")
+        #expect(request.httpMethod == "POST")
+    }
+
+    @Test("builder sets Authorization header for text query")
+    func testBuilder_textQuery_setsAuthorizationHeader() throws {
+        let request = try builder.buildTextRequest(query: "Apple")
+        let authHeader = request.value(forHTTPHeaderField: "Authorization")
+        #expect(authHeader == "Bearer test-key-123")
+    }
+
+    @Test("builder encodes non-empty body for text query")
+    func testBuilder_textQuery_encodesNonEmptyBody() throws {
+        let request = try builder.buildTextRequest(query: "Apple")
+        #expect(request.httpBody != nil)
+    }
+}
+
+
 
 
 

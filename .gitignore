@@ -1,0 +1,13 @@
+# Secrets — never commit API keys
+Secrets.xcconfig
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+
+# macOS
+.DS_Store
